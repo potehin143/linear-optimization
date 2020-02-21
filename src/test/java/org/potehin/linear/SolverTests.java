@@ -15,19 +15,31 @@ class SolverTests {
     public void solveTest() {
 
         Solver<Integer, Integer> solver = new Solver<>();
-        LinearModel linearModel = getIntegerLinearModel();
+        LinearModel linearModel = getTestLinearModel();
+        Assertions.assertTrue(linearModel.hasNextIteration());
         solver.solve(linearModel);
     }
 
     @Test
     public void getConstantArrayTest(){
-        LinearModel linearModel = getIntegerLinearModel();
+        LinearModel linearModel = getTestLinearModel();
+        System.out.println("Iteration 1");
+        System.out.println(linearModel);
+        linearModel.iterate();
+        System.out.println("Iteration 1");
+        System.out.println(linearModel);
+        linearModel.iterate();
+        System.out.println("Iteration 2");
+        System.out.println(linearModel);
+        linearModel.iterate();
+        System.out.println("Iteration 3 ");
+        System.out.println(linearModel);
 
-        float[][] constants = linearModel.getConstants();
-        assert constants[0][0]==1f;
-        assert constants[0][1]==2f;
-        assert constants[0][2]==3f;
+        Assertions.assertFalse(linearModel.hasNextIteration());
+        System.out.println(linearModel.getResults());
     }
+
+
 
     @Test
     public void subArrayTest(){
@@ -61,33 +73,31 @@ class SolverTests {
 
     }
 
-    private LinearModel getIntegerLinearModel() {
-
-        Variable x1 = Variable.of("x1", 0);
-        Variable x2 = Variable.of("x2", 0);
-        Variable x3 = Variable.of("x3", 0);
-        Variable x4 = Variable.of("x4", 0);
+    private LinearModel getTestLinearModel() {
 
         Set<Variable> variables = new LinkedHashSet<>();
-        variables.add(x1);
-        variables.add(x2);
-        variables.add(x3);
-        variables.add(x4);
+        variables.add( Variable.of("x1"));
+        variables.add( Variable.of("x2"));
 
-        Map<String, Float> constants1 = new LinkedHashMap<>();
-        constants1.put("x1", 1f);
-        constants1.put("x2", 2f);
-        constants1.put("x3", 3f);
+        Map<String, Float> a1 = new LinkedHashMap<>();
+        a1.put("x1", 2f);   a1.put("x2", 1f);
 
-        Map<String, Float> objectiveMap = new LinkedHashMap<>();
-        objectiveMap.put("x1", 1f);
-        objectiveMap.put("x2", 2f);
-        objectiveMap.put("x3", 3f);
+        Map<String, Float> a2 = new LinkedHashMap<>();
+        a2.put("x1", 1f);   a2.put("x2", 3f);
+
+        Map<String, Float> a3 = new LinkedHashMap<>();
+        a3.put("x1", 0f);   a3.put("x2", 1f);
+
+        Map<String, Float> z = new LinkedHashMap<>();
+        z.put("x1", 4f);
+        z.put("x2", 6f);
 
         return LinearModel.create()
                 .setVariables(variables)
-                .addEquation(Equation.of(constants1, RatioType.EQUAL, 0))
-                .setObjective(Objective.maximizeBy(objectiveMap));
+                .addEquation(Equation.of(a1, RatioType.LESS_EQUAL, 64))
+                .addEquation(Equation.of(a2, RatioType.LESS_EQUAL, 72))
+                .addEquation(Equation.of(a3, RatioType.LESS_EQUAL, 20))
+                .setObjective(Objective.maximizeBy(z)).init();
     }
 
 

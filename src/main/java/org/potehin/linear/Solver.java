@@ -11,21 +11,6 @@ public class Solver<T extends Number,V extends Number> {
             throw new IllegalArgumentException("linearModel is invalid");
         }
 
-        float[][] a = linearModel.getConstants();   // tableaux
-        int m = a.length;          // number of constraints
-        int n = a[0].length;          // number of original variables
-
-        int[] basis = getInitialBasis(m);   // basis[i] = basic variable corresponding to row i
-                        // only needed to print out solution, not book
-    }
-
-
-    private  static int[] getInitialBasis(int m){
-        int[] basis = new int[m];
-        for (int j = 0; j < m; j++) {
-            basis[j] = j;
-        }
-        return basis;
     }
 
 
