@@ -1,6 +1,5 @@
 package org.potehin.linear;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -9,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -42,6 +40,10 @@ public class LinearModel {
 
     public Variable[] getVariables() {
         return variables;
+    }
+
+    public Float getTargetValue() {
+        return this.objectiveMatrixRow != null ? this.objectiveMatrixRow.getRhsTotal() : null;
     }
 
     public static LinearModel create() {
@@ -109,10 +111,11 @@ public class LinearModel {
     public Optional<MatrixRow> nextIterationRow(int nextIterationColumnIndex) {
         return this.matrixRows.stream()
                 .filter(row -> (lastIteratedRow == null || lastIteratedRow != row)
-                        && row.getRhsDevidedByValue(nextIterationColumnIndex).isPresent())
+                                && row.getValue(nextIterationColumnIndex) >0  // TODO добавить погрешность
+                                && row.getRhsDevidedByValue(nextIterationColumnIndex).isPresent()
+                )
                 .min(Comparator.comparing(row ->
-                        row.getRhsDevidedByValue(nextIterationColumnIndex).get())
-                );
+                        row.getRhsDevidedByValue(nextIterationColumnIndex).get()));
     }
 
     public void iterate() {
@@ -123,42 +126,46 @@ public class LinearModel {
         }
         int iterationColumnIndex = minNegativeIndexOptional.get();
         Optional<MatrixRow> nextIterationRowOptional = this.nextIterationRow(iterationColumnIndex);
+
         if (!nextIterationRowOptional.isPresent()) {
             throw new IllegalStateException("Have no any row found for next iteration");
         }
         MatrixRow nextIterationRow = nextIterationRowOptional.get();
 
+        System.out.println("Next row devided value" + nextIterationRow.getRhsDevidedByValue(iterationColumnIndex).get());
+
         float devider = nextIterationRow.getValue(iterationColumnIndex);
 
         this.objectiveMatrixRow.add(
                 nextIterationRow
-                        .multiplyAndClone((-1) * objectiveMatrixRow.getValue(iterationColumnIndex))
-                        .devideByValue(devider));
+                        .cloneAndMultiply((-1) * objectiveMatrixRow.getValue(iterationColumnIndex))
+                        .devideByValue(devider)); // В строке целефой функции в разрещающем столбце должен появиться 0
 
         this.matrixRows.stream()
                 .filter(row -> row != nextIterationRow)
                 .forEach(row ->
                         row.add(nextIterationRow
-                                .multiplyAndClone((-1) * row.getValue(iterationColumnIndex))
-                                .devideByValue(devider)
+                                .cloneAndMultiply((-1) * row.getValue(iterationColumnIndex))
+                                .devideByValue(devider) // Во всех строках кроме разрещающей в разрешающем столбце должен появиться 0
+
                         )
                 );
 
-        nextIterationRow.devideByValue(devider);
+        nextIterationRow.devideByValue(devider); // В разрешающей строке в разрешающем столбце должен быть 0
 
-        if(iterationColumnIndex<variables.length) {
+        if (iterationColumnIndex < variables.length) {
             nextIterationRow.setLabel(variables[iterationColumnIndex].getName());
-        }else{
-            nextIterationRow.setLabel(additions[iterationColumnIndex-variables.length].getName());
+        } else {
+            nextIterationRow.setLabel(additions[iterationColumnIndex - variables.length].getName());
         }
         this.lastIteratedRow = nextIterationRow;
     }
 
-    public Map<String,Variable> getResults(){
-        Map<String,Variable> results = Arrays.stream(this.variables)
-                .collect(Collectors.toMap(Variable::getName,variable -> Variable.of(variable.getName())));
+    public Map<String, Variable> getResults() {
+        Map<String, Variable> results = Arrays.stream(this.variables)
+                .collect(Collectors.toMap(Variable::getName, variable -> Variable.of(variable.getName())));
         this.matrixRows.forEach(matrixRow -> {
-            if(results.containsKey(matrixRow.getLabel())){
+            if (results.containsKey(matrixRow.getLabel())) {
                 results.get(matrixRow.getLabel()).setValue(matrixRow.getRhsTotal());
             }
         });
@@ -176,17 +183,26 @@ public class LinearModel {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("|%5s |", ""));
         for (Variable variable : variables) {
-            sb.append(String.format("%7s ", variable.getName()));
+            sb.append(String.format("%6s ", variable.getName()));
         }
         for (Variable variable : additions) {
-            sb.append(String.format("%7s ", variable.getName()));
+            sb.append(String.format("%6s ", variable.getName()));
         }
-        sb.append(String.format("|%7s |", ""));
+        sb.append(String.format("|%6s |", ""));
         sb.append(System.lineSeparator());
         sb.append(this.objectiveMatrixRow).append(System.lineSeparator());
-        this.matrixRows.forEach(matrixRow ->
-                sb.append(matrixRow).append(System.lineSeparator())
-        );
+        this.matrixRows.stream()
+                .forEach(matrixRow ->
+                        sb.append(matrixRow)
+                                .append(objectiveMatrixRow.minNegativeValueIndex()
+                                        .filter(index ->matrixRow!=this.lastIteratedRow)
+                                        .map(index ->
+                                                String.format("%s/%s",
+                                                        matrixRow.getRhsTotal(),
+                                                        matrixRow.getValue(index)))
+                                        .orElse("--"))
+                                .append(System.lineSeparator())
+                );
         return sb.toString();
     }
 }

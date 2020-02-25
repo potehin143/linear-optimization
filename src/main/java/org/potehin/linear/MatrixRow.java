@@ -29,7 +29,7 @@ public class MatrixRow {
 
     }
 
-    public MatrixRow multiplyAndClone(float multiplier) {
+    public MatrixRow cloneAndMultiply(float multiplier) {
         MatrixRow result = MatrixRow.of(this.label,new float[values.length],this.rhsTotal*multiplier);
 
         for (int index = 0; index < values.length; index++) {
@@ -44,10 +44,6 @@ public class MatrixRow {
         }
         this.rhsTotal += matrixRow.getRhsTotal();
         return this;
-    }
-
-    public boolean couldBeeDevidedByValue(int index) {
-        return getValue(index) != 0;
     }
 
     public MatrixRow devideByValue(float value) {
@@ -70,9 +66,9 @@ public class MatrixRow {
 
     public Optional<Integer> minNegativeValueIndex() {
         return Optional.ofNullable(this.values)
-                .filter(values -> values.length > 0)
+                .filter(values -> values.length > 0) // если массив пустой, то ничего не считаем
                 .map(values -> {
-                    int result = 0;
+                    int result = 0; // первое значение массива
                     for (int i = 0; i < values.length; i++) {
                         if (values[i] < values[result]) {
                             result = i;
@@ -85,7 +81,7 @@ public class MatrixRow {
     public Optional<Float> getRhsDevidedByValue(int index) {
         return Optional.ofNullable(this.values)
                 .map(values -> values[index])
-                .filter(value -> value != 0)//TODO добавить погрешность
+                .filter(value -> value > 0)//TODO добавить погрешность
                 .map(value -> this.rhsTotal / value);
 
     }
@@ -103,6 +99,6 @@ public class MatrixRow {
     }
 
     private static String pretty(float value) {
-        return String.format("%7.2f ", value);
+        return String.format("%6.1f ", value);
     }
 }
